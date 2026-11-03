@@ -68,6 +68,43 @@ class StudentScopingTests(unittest.TestCase):
         self.assertEqual(response.status_code, 403)
         list_students.assert_not_called()
 
+    @patch("blueprints.students.db.list_students")
+    @patch("blueprints.students.db.student_scope_for_user")
+    def test_non_finite_range_filters_are_ignored(self, get_scope, list_students):
+        scope = {"school_id": "school-a", "class_id": "class-7"}
+        records = [{"student_id": "s1"}]
+        get_scope.return_value = scope
+        list_students.return_value = records
+        self.login_as("teacher")
+
+        response = self.client.get(
+            "/api/students?attendance_min=nan&gpa_min=inf&attendance_max=-inf"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.get_json(), {"students": records, "count": 1})
+        list_students.assert_called_once_with(filter_query=scope, limit=None)
+
+    @patch("blueprints.students.db.list_students")
+    @patch("blueprints.students.db.student_scope_for_user")
+    def test_finite_range_filters_still_apply(self, get_scope, list_students):
+        scope = {"school_id": "school-a", "class_id": "class-7"}
+        get_scope.return_value = scope
+        list_students.return_value = []
+        self.login_as("teacher")
+
+        response = self.client.get("/api/students?attendance_min=0.5&gpa_max=3.5")
+
+        self.assertEqual(response.status_code, 200)
+        list_students.assert_called_once_with(
+            filter_query={"$and": [
+                {"attendance_rate": {"$gte": 0.5}},
+                {"previous_semester_gpa": {"$lte": 3.5}},
+                scope,
+            ]},
+            limit=None,
+        )
+
     @patch("blueprints.students.db.get_student", return_value=None)
     @patch("blueprints.students.db.student_scope_for_user")
     def test_individual_student_lookup_uses_staff_scope(self, get_scope, get_student):
