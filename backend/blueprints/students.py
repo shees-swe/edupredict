@@ -2,6 +2,7 @@ import io
 import re
 import csv
 import json
+import math
 from flask import Blueprint, request, jsonify, session
 import db
 from extensions import login_required
@@ -32,9 +33,10 @@ def get_students():
     def _num(name):
         val = request.args.get(name)
         try:
-            return float(val) if val not in (None, "") else None
+            num = float(val) if val not in (None, "") else None
         except ValueError:
             return None
+        return num if num is None or math.isfinite(num) else None
 
     attendance_min, attendance_max = _num("attendance_min"), _num("attendance_max")
     gpa_min, gpa_max = _num("gpa_min"), _num("gpa_max")
