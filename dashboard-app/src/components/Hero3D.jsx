@@ -160,18 +160,23 @@ export default function Hero3D({ className, style }) {
 
 /**
  * Resolve a CSS custom property to something THREE.Color can parse.
- * The design tokens are oklch(), which Three.js doesn't understand, so
- * we let the canvas 2D parser normalize it to rgb().
+ * The design tokens are oklch(), which THREE.Color does not understand
+ * (it silently keeps white). A canvas round-trip is not reliable either,
+ * since the browser may hand back oklch() or color() strings. Reading a
+ * probe element's computed color always serializes to rgb(), which
+ * THREE.Color parses correctly.
  */
 function cssColor(name, fallback) {
   if (typeof window === "undefined") return fallback;
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   if (!value) return fallback;
   try {
-    const ctx = document.createElement("canvas").getContext("2d");
-    if (!ctx) return fallback;
-    ctx.fillStyle = value;
-    return ctx.fillStyle || fallback;
+    const probe = document.createElement("span");
+    probe.style.color = value;
+    document.body.appendChild(probe);
+    const rgb = getComputedStyle(probe).color;
+    probe.remove();
+    return rgb || fallback;
   } catch {
     return fallback;
   }
