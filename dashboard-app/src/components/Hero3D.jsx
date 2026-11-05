@@ -58,7 +58,7 @@ export default function Hero3D({ className, style }) {
 
       const coreGeo = new THREE.IcosahedronGeometry(0.5, 1);
       const coreMat = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(foreground),
+        color: new THREE.Color(cssColor("--foreground", "#f2f3ed")),
         transparent: true,
         opacity: 0.9,
       });
