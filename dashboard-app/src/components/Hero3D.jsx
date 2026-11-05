@@ -19,6 +19,7 @@ export default function Hero3D({ className, style }) {
     let camera;
     let frameId;
     let resizeObserver;
+    let themeObserver;
     let disposed = false;
     let icosahedron;
     let core;
@@ -84,6 +85,21 @@ export default function Hero3D({ className, style }) {
       points = new THREE.Points(pointsGeo, pointsMat);
       scene.add(points);
 
+      // The colors above are read once at mount, but the theme class is
+      // applied by the provider after children mount and can be toggled
+      // at any time — re-resolve the tokens whenever it changes, or the
+      // orb keeps the previous theme's colors (white orb on light theme).
+      const applyColors = () => {
+        icoMat.color.set(cssColor("--primary", "#c8f24e"));
+        coreMat.color.set(cssColor("--foreground", "#f2f3ed"));
+        pointsMat.color.set(cssColor("--muted-foreground", "#9ca093"));
+      };
+      themeObserver = new MutationObserver(applyColors);
+      themeObserver.observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ["class"],
+      });
+
       const clock = new THREE.Clock();
 
       const renderFrame = () => {
@@ -124,6 +140,7 @@ export default function Hero3D({ className, style }) {
       disposed = true;
       if (frameId) cancelAnimationFrame(frameId);
       if (resizeObserver) resizeObserver.disconnect();
+      if (themeObserver) themeObserver.disconnect();
       [icosahedron, core, points].forEach((object) => {
         if (!object) return;
         if (object.geometry) object.geometry.dispose();
