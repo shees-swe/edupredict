@@ -164,22 +164,27 @@ export default function Hero3D({ className, style }) {
 /**
  * Resolve a CSS custom property to something THREE.Color can parse.
  * The design tokens are oklch(), which THREE.Color does not understand
- * (it silently keeps white). A canvas round-trip is not reliable either,
- * since the browser may hand back oklch() or color() strings. Reading a
- * probe element's computed color always serializes to rgb(), which
- * THREE.Color parses correctly.
+ * (it silently keeps white), and string round-trips are unreliable:
+ * getComputedStyle and canvas fillStyle can both hand the oklch() text
+ * straight back in Chromium. Painting one pixel and reading its image
+ * data always yields the true sRGB bytes, which THREE.Color parses.
  */
 function cssColor(name, fallback) {
   if (typeof window === "undefined") return fallback;
   const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   if (!value) return fallback;
   try {
-    const probe = document.createElement("span");
-    probe.style.color = value;
-    document.body.appendChild(probe);
-    const rgb = getComputedStyle(probe).color;
-    probe.remove();
-    return rgb || fallback;
+    if (!cssColor._canvas) {
+      cssColor._canvas = document.createElement("canvas");
+      cssColor._canvas.width = 1;
+      cssColor._canvas.height = 1;
+    }
+    const ctx = cssColor._canvas.getContext("2d", { willReadFrequently: true });
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = value;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return `rgb(${r}, ${g}, ${b})`;
   } catch {
     return fallback;
   }
