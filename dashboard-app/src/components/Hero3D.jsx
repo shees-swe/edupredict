@@ -28,9 +28,10 @@ export default function Hero3D({ className, style }) {
     const reduceMotion =
       window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-    const accent = cssColor("--primary", "#c8f24e");
-    const foreground = cssColor("--foreground", "#f2f3ed");
-    const muted = cssColor("--muted-foreground", "#9ca093");
+    const isLightTheme = () => document.documentElement.classList.contains("light");
+    const orbColor = () => cssColor(isLightTheme() ? "--foreground" : "--primary", "#c8f24e");
+    const pointColor = () =>
+      cssColor(isLightTheme() ? "--foreground" : "--muted-foreground", "#9ca093");
 
     try {
       const width = container.clientWidth || 1;
@@ -47,10 +48,10 @@ export default function Hero3D({ className, style }) {
 
       const icoGeo = new THREE.IcosahedronGeometry(2.1, 1);
       const icoMat = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(accent),
+        color: new THREE.Color(orbColor()),
         wireframe: true,
         transparent: true,
-        opacity: 0.32,
+        opacity: isLightTheme() ? 0.5 : 0.32,
       });
       icosahedron = new THREE.Mesh(icoGeo, icoMat);
       scene.add(icosahedron);
@@ -77,22 +78,24 @@ export default function Hero3D({ className, style }) {
       const pointsGeo = new THREE.BufferGeometry();
       pointsGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
       const pointsMat = new THREE.PointsMaterial({
-        color: new THREE.Color(muted),
+        color: new THREE.Color(pointColor()),
         size: 0.045,
         transparent: true,
-        opacity: 0.65,
+        opacity: isLightTheme() ? 0.75 : 0.65,
       });
       points = new THREE.Points(pointsGeo, pointsMat);
       scene.add(points);
 
       // The colors above are read once at mount, but the theme class is
       // applied by the provider after children mount and can be toggled
-      // at any time — re-resolve the tokens whenever it changes, or the
-      // orb keeps the previous theme's colors (white orb on light theme).
+      // at any time — re-resolve the tokens whenever it changes.
       const applyColors = () => {
-        icoMat.color.set(cssColor("--primary", "#c8f24e"));
+        const lightTheme = isLightTheme();
+        icoMat.color.set(orbColor());
+        icoMat.opacity = lightTheme ? 0.5 : 0.32;
         coreMat.color.set(cssColor("--foreground", "#f2f3ed"));
-        pointsMat.color.set(cssColor("--muted-foreground", "#9ca093"));
+        pointsMat.color.set(pointColor());
+        pointsMat.opacity = lightTheme ? 0.75 : 0.65;
       };
       themeObserver = new MutationObserver(applyColors);
       themeObserver.observe(document.documentElement, {
